@@ -55,14 +55,14 @@ public class PlayerListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent e) {
         if (plugin.getConfig().getBoolean("Enabled") && !(e.getEntity().hasPermission("deathban.ban.exempt"))) {
             plugin.log("Player death: " + e.getEntity().getName());
-            plugin.bans.banPlayer(e.getEntity().getName());
+            plugin.bans.banPlayer(e.getEntity().getUniqueId());
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerLogin(AsyncPlayerPreLoginEvent e) {
         if (plugin.getConfig().getBoolean("Enabled")) {
-            if (plugin.bans.checkPlayerIsBanned(e.getName())) {
+            if (plugin.bans.checkPlayerIsBanned(e.getUniqueId())) {
                 if (plugin.credits.getPlayerCredits(e.getName()) < 1) {
                     plugin.log("Banned player denied login: " + e.getName());
                     String s = plugin.getConfig().getString("Early-Message");
@@ -70,7 +70,7 @@ public class PlayerListener implements Listener {
                 } else {
                     plugin.log("Banned player redeemed 1 revival credit upon login: " + e.getName());
                     plugin.credits.givePlayerCredits(e.getName(), -1);
-                    plugin.bans.unbanPlayer(e.getName());
+                    plugin.bans.unbanPlayer(e.getUniqueId());
                     e.allow();
                 }
             } else if (!plugin.credits.checkPlayerHasPlayedBefore(e.getName())) {

@@ -23,10 +23,12 @@
 
 package com.mstiles92.plugins.hardcoredeathban.tasks;
 
-import com.mstiles92.plugins.hardcoredeathban.HardcoreDeathBan;
+import java.util.Calendar;
+import java.util.UUID;
+
 import org.bukkit.entity.Player;
 
-import java.util.Calendar;
+import com.mstiles92.plugins.hardcoredeathban.HardcoreDeathBan;
 
 /**
  * KickRunnable is a class that implements the Runnable interface, used to
@@ -36,7 +38,7 @@ import java.util.Calendar;
  */
 public class KickRunnable implements Runnable {
     private final HardcoreDeathBan plugin;
-    private final String playerName;
+    private final UUID playerUUID;
 
     /**
      * The main constructor for this class.
@@ -44,16 +46,16 @@ public class KickRunnable implements Runnable {
      * @param plugin     the instance of the plugin
      * @param playerName the name of the player to kick
      */
-    public KickRunnable(HardcoreDeathBan plugin, String playerName) {
+    public KickRunnable(HardcoreDeathBan plugin, UUID playerName) {
         this.plugin = plugin;
-        this.playerName = playerName;
+        this.playerUUID = playerName;
     }
 
     @Override
     public void run() {
-        Calendar unbanDate = plugin.bans.getUnbanCalendar(playerName);
+        Calendar unbanDate = plugin.bans.getUnbanCalendar(playerUUID);
         if (unbanDate != null) {
-            Player p = plugin.getServer().getPlayerExact(playerName);
+			Player p = plugin.getServer().getPlayer(playerUUID);
             String kickMessage = plugin.getConfig().getString("Death-Message");
             if (p != null) {
                 for (String s : plugin.bans.deathClasses) {
@@ -63,12 +65,12 @@ public class KickRunnable implements Runnable {
                     }
                 }
                 p.kickPlayer(plugin.replaceVariables(kickMessage, p.getName()));
-                plugin.log("[KickRunnable] Player " + playerName + " kicked.");
+                plugin.log("[KickRunnable] Player " + playerUUID + " kicked.");
             } else {
-                plugin.log("[KickRunnable] Player " + playerName + " is offline.");
+                plugin.log("[KickRunnable] Player " + playerUUID + " is offline.");
             }
         } else {
-            plugin.log("[KickRunnable] Failed to store ban for " + playerName);
+            plugin.log("[KickRunnable] Failed to store ban for " + playerUUID);
         }
     }
 }

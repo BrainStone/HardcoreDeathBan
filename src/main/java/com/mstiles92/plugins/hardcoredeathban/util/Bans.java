@@ -23,19 +23,21 @@
 
 package com.mstiles92.plugins.hardcoredeathban.util;
 
-import com.mstiles92.plugins.commonutils.calendar.CalendarUtils;
-import com.mstiles92.plugins.hardcoredeathban.HardcoreDeathBan;
-import com.mstiles92.plugins.hardcoredeathban.tasks.KickRunnable;
+import java.io.File;
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.Set;
+import java.util.UUID;
+
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.Set;
+import com.mstiles92.plugins.commonutils.calendar.CalendarUtils;
+import com.mstiles92.plugins.hardcoredeathban.HardcoreDeathBan;
+import com.mstiles92.plugins.hardcoredeathban.tasks.KickRunnable;
 
 /**
  * Bans is a class used to store and modify the ban length of each player.
@@ -98,12 +100,12 @@ public class Bans {
      * @return a Calendar object that specifies the date and time when the
      * player's ban is over, or null if the player is not banned
      */
-    public Calendar getUnbanCalendar(String player) {
+    public Calendar getUnbanCalendar(UUID player) {
         if (player == null) {
             return null;
         }
         Calendar calendar = Calendar.getInstance();
-        final long ms = config.getLong(player.toLowerCase(), 0);
+        final long ms = config.getLong(player.toString(), 0);
         if (ms == 0) {
             return null;
         }
@@ -117,7 +119,7 @@ public class Bans {
      * @param player the name of the player to check
      * @return true if the player is currently banned, false otherwise
      */
-    public boolean checkPlayerIsBanned(String player) {
+    public boolean checkPlayerIsBanned(UUID player) {
         final Calendar unban = getUnbanCalendar(player);
         final Calendar now = Calendar.getInstance();
         if (unban != null) {
@@ -134,9 +136,32 @@ public class Bans {
      *
      * @param player name of the player to be unbanned
      */
-    public void unbanPlayer(String player) {
+    public void unbanPlayer(UUID player) {
         plugin.log("Player unbanned: " + player);
-        config.set(player.toLowerCase(), null);
+        config.set(player.toString(), null);
+        
+        ImprovedOfflinePlayer offlinePlayer = new ImprovedOfflinePlayer(player);
+		if (!offlinePlayer.exists())
+			return;
+
+		offlinePlayer.setAutoSave(false);
+
+		offlinePlayer.setSleeping(true);
+		offlinePlayer.setDeathTime(0);
+		offlinePlayer.setAir(30);
+		offlinePlayer.setFireTicks(-20);
+		offlinePlayer.setHealth(20);
+		offlinePlayer.setFoodLevel(20);
+		offlinePlayer.setScore(0);
+		offlinePlayer.setLevel(0);
+		offlinePlayer.setTotalExperience(0);
+		offlinePlayer.setFallDistance(0);
+		offlinePlayer.setHealF(20.0F);
+		offlinePlayer.setExp(0.0F);
+		
+		offlinePlayer.setLocation(offlinePlayer.getBedSpawnLocation());
+
+		offlinePlayer.savePlayerData();
     }
 
     /**
@@ -144,8 +169,8 @@ public class Bans {
      *
      * @param player the player to ban
      */
-    public void banPlayer(String player) {
-        final Player p = plugin.getServer().getPlayerExact(player);
+    public void banPlayer(UUID player) {
+		final Player p = plugin.getServer().getPlayer(player);
         if (p != null) {
             for (String s : this.deathClasses) {
                 Permission perm = new Permission("deathban.class." + s);
@@ -167,20 +192,20 @@ public class Bans {
      * @param player the player to ban
      * @param time   the amount of time the player will be banned
      */
-    public void banPlayer(String player, String time) {
-        final Player p = plugin.getServer().getPlayerExact(player);
+    public void banPlayer(UUID player, String time) {
+		final Player p = plugin.getServer().getPlayer(player);
         try {
             final Calendar unbanDate = CalendarUtils.parseTimeDifference(time);
 
             if (p != null) {            // Player is online
                 if (!p.hasPermission("deathban.ban.exempt")) {
-                    config.set(player.toLowerCase(), unbanDate.getTimeInMillis());
+                    config.set(player.toString(), unbanDate.getTimeInMillis());
                     save();
                     plugin.log("Player added to ban list: " + player);
                     plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new KickRunnable(plugin, player), plugin.getConfig().getInt("Tick-Delay"));
                 }
             } else {                    // Player is offline
-                config.set(player.toLowerCase(), unbanDate.getTimeInMillis());
+                config.set(player.toString(), unbanDate.getTimeInMillis());
                 save();
                 plugin.log("Offline player added to ban list: " + player);
             }
