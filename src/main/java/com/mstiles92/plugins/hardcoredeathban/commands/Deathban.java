@@ -48,7 +48,37 @@ public class Deathban implements CommandHandler {
 	 * The main constructor for this class.
 	 */
 	public Deathban() {
-		this.plugin = HardcoreDeathBan.getInstance();
+		plugin = HardcoreDeathBan.getInstance();
+	}
+
+	@Command(name = "deathban.ban", aliases = { "db.ban", "hdb.ban" }, permission = "deathban.ban")
+	public void ban(Arguments args) {
+		if (args.getArgs().length < 1) {
+			args.getSender().sendMessage(
+					tag + ChatColor.RED + "You must specify a player.");
+			return;
+		}
+
+		final Player player = plugin.getServer().getPlayer(args.getArgs()[0]);
+
+		if ((player != null) && player.hasPermission("deathban.ban.exempt")) {
+			args.getSender().sendMessage(
+					tag + ChatColor.RED + "This player can not be banned!");
+			return;
+		}
+
+		if (args.getArgs().length < 2) {
+			plugin.bans.banPlayer(player.getUniqueId());
+		} else {
+			plugin.bans.banPlayer(player.getUniqueId(), args.getArgs()[1]);
+		}
+
+		args.getSender()
+				.sendMessage(
+						tag
+								+ plugin.replaceVariables(
+										"%player% is now banned until %unbantime% %unbandate%",
+										args.getArgs()[0], player.getUniqueId()));
 	}
 
 	@Command(name = "deathban", aliases = { "db", "hdb" }, permission = "deathban.display")
@@ -110,20 +140,6 @@ public class Deathban implements CommandHandler {
 								+ "Take a certain amount of credits from another player.");
 	}
 
-	@Command(name = "deathban.enable", aliases = { "db.enable", "hdb.enable" }, permission = "deathban.enable")
-	public void enable(Arguments args) {
-		plugin.getConfig().set("Enabled", true);
-		plugin.saveConfig();
-		args.getSender().sendMessage(tag + "Enabled!");
-
-		for (Player p : plugin.getServer().getOnlinePlayers()) {
-			if (plugin.bans.checkPlayerIsBanned(p.getUniqueId())) {
-				p.kickPlayer(plugin.replaceVariables(plugin.getConfig()
-						.getString("Banned-Message"), p.getName()));
-			}
-		}
-	}
-
 	@Command(name = "deathban.disable", aliases = { "db.disable", "hdb.disable" }, permission = "deathban.enable")
 	public void disable(Arguments args) {
 		plugin.getConfig().set("Enabled", false);
@@ -131,54 +147,18 @@ public class Deathban implements CommandHandler {
 		args.getSender().sendMessage(tag + "Disabled!");
 	}
 
-	@Command(name = "deathban.ban", aliases = { "db.ban", "hdb.ban" }, permission = "deathban.ban")
-	public void ban(Arguments args) {
-		if (args.getArgs().length < 1) {
-			args.getSender().sendMessage(
-					tag + ChatColor.RED + "You must specify a player.");
-			return;
-		}
+	@Command(name = "deathban.enable", aliases = { "db.enable", "hdb.enable" }, permission = "deathban.enable")
+	public void enable(Arguments args) {
+		plugin.getConfig().set("Enabled", true);
+		plugin.saveConfig();
+		args.getSender().sendMessage(tag + "Enabled!");
 
-		@SuppressWarnings("deprecation")
-		Player player = plugin.getServer().getPlayer(args.getArgs()[0]);
-
-		if (player != null && player.hasPermission("deathban.ban.exempt")) {
-			args.getSender().sendMessage(
-					tag + ChatColor.RED + "This player can not be banned!");
-			return;
-		}
-
-		if (args.getArgs().length < 2) {
-			plugin.bans.banPlayer(player.getUniqueId());
-		} else {
-			plugin.bans.banPlayer(player.getUniqueId(), args.getArgs()[1]);
-		}
-
-		args.getSender()
-				.sendMessage(
-						tag
-								+ plugin.replaceVariables(
-										"%player% is now banned until %unbantime% %unbandate%",
-										args.getArgs()[0]));
-	}
-
-	@Command(name = "deathban.unban", aliases = { "db.unban", "hdb.unban" }, permission = "deathban.unban")
-	public void unban(Arguments args) {
-		if (args.getArgs().length < 1) {
-			args.getSender().sendMessage(
-					tag + ChatColor.RED + "You must specify a player.");
-			return;
-		}
-		
-		UUID player = ImprovedOfflinePlayer.getUUIDFromName(args.getArgs()[0]);
-
-		if (plugin.bans.checkPlayerIsBanned(player)) {
-			plugin.bans.unbanPlayer(player);
-			args.getSender().sendMessage(
-					tag + args.getArgs()[0] + " has been unbanned.");
-		} else {
-			args.getSender().sendMessage(
-					tag + args.getArgs()[0] + " is not currently banned.");
+		for (final Player p : plugin.getServer().getOnlinePlayers()) {
+			if (plugin.bans.checkPlayerIsBanned(p.getUniqueId())) {
+				p.kickPlayer(plugin.replaceVariables(plugin.getConfig()
+						.getString("Banned-Message"), p.getName(), p
+						.getUniqueId()));
+			}
 		}
 	}
 
@@ -189,8 +169,9 @@ public class Deathban implements CommandHandler {
 					tag + ChatColor.RED + "You must specify a player.");
 			return;
 		}
-		
-		UUID player = ImprovedOfflinePlayer.getUUIDFromName(args.getArgs()[0]);
+
+		final UUID player = ImprovedOfflinePlayer.getUUIDFromName(args
+				.getArgs()[0]);
 
 		if (plugin.bans.checkPlayerIsBanned(player)) {
 			args.getSender()
@@ -198,7 +179,28 @@ public class Deathban implements CommandHandler {
 							tag
 									+ plugin.replaceVariables(
 											"%player% is banned until %unbantime% %unbandate%",
-											args.getArgs()[0]));
+											args.getArgs()[0], player));
+		} else {
+			args.getSender().sendMessage(
+					tag + args.getArgs()[0] + " is not currently banned.");
+		}
+	}
+
+	@Command(name = "deathban.unban", aliases = { "db.unban", "hdb.unban" }, permission = "deathban.unban")
+	public void unban(Arguments args) {
+		if (args.getArgs().length < 1) {
+			args.getSender().sendMessage(
+					tag + ChatColor.RED + "You must specify a player.");
+			return;
+		}
+
+		final UUID player = ImprovedOfflinePlayer.getUUIDFromName(args
+				.getArgs()[0]);
+
+		if (plugin.bans.checkPlayerIsBanned(player)) {
+			plugin.bans.unbanPlayer(player);
+			args.getSender().sendMessage(
+					tag + args.getArgs()[0] + " has been unbanned.");
 		} else {
 			args.getSender().sendMessage(
 					tag + args.getArgs()[0] + " is not currently banned.");

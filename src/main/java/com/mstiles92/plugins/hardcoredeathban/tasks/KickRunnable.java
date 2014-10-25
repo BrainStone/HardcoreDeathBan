@@ -31,46 +31,51 @@ import org.bukkit.entity.Player;
 import com.mstiles92.plugins.hardcoredeathban.HardcoreDeathBan;
 
 /**
- * KickRunnable is a class that implements the Runnable interface, used to
- * kick the player after a short delay when getting banned after death.
- *
+ * KickRunnable is a class that implements the Runnable interface, used to kick
+ * the player after a short delay when getting banned after death.
+ * 
  * @author mstiles92
  */
 public class KickRunnable implements Runnable {
-    private final HardcoreDeathBan plugin;
-    private final UUID playerUUID;
+	private final HardcoreDeathBan plugin;
+	private final UUID playerUUID;
 
-    /**
-     * The main constructor for this class.
-     *
-     * @param plugin     the instance of the plugin
-     * @param playerName the name of the player to kick
-     */
-    public KickRunnable(HardcoreDeathBan plugin, UUID playerName) {
-        this.plugin = plugin;
-        this.playerUUID = playerName;
-    }
+	/**
+	 * The main constructor for this class.
+	 * 
+	 * @param plugin
+	 *            the instance of the plugin
+	 * @param playerName
+	 *            the name of the player to kick
+	 */
+	public KickRunnable(HardcoreDeathBan plugin, UUID playerName) {
+		this.plugin = plugin;
+		playerUUID = playerName;
+	}
 
-    @Override
-    public void run() {
-        Calendar unbanDate = plugin.bans.getUnbanCalendar(playerUUID);
-        if (unbanDate != null) {
-			Player p = plugin.getServer().getPlayer(playerUUID);
-            String kickMessage = plugin.getConfig().getString("Death-Message");
-            if (p != null) {
-                for (String s : plugin.bans.deathClasses) {
-                    if (p.hasPermission("deathban.class." + s)) {
-                        kickMessage = plugin.getConfig().getString("Death-Classes." + s + ".Death-Message");
-                        break;
-                    }
-                }
-                p.kickPlayer(plugin.replaceVariables(kickMessage, p.getName()));
-                plugin.log("[KickRunnable] Player " + playerUUID + " kicked.");
-            } else {
-                plugin.log("[KickRunnable] Player " + playerUUID + " is offline.");
-            }
-        } else {
-            plugin.log("[KickRunnable] Failed to store ban for " + playerUUID);
-        }
-    }
+	@Override
+	public void run() {
+		final Calendar unbanDate = plugin.bans.getUnbanCalendar(playerUUID);
+		if (unbanDate != null) {
+			final Player p = plugin.getServer().getPlayer(playerUUID);
+			String kickMessage = plugin.getConfig().getString("Death-Message");
+			if (p != null) {
+				for (final String s : plugin.bans.deathClasses) {
+					if (p.hasPermission("deathban.class." + s)) {
+						kickMessage = plugin.getConfig().getString(
+								"Death-Classes." + s + ".Death-Message");
+						break;
+					}
+				}
+				p.kickPlayer(plugin.replaceVariables(kickMessage, p.getName(),
+						p.getUniqueId()));
+				plugin.log("[KickRunnable] Player " + playerUUID + " kicked.");
+			} else {
+				plugin.log("[KickRunnable] Player " + playerUUID
+						+ " is offline.");
+			}
+		} else {
+			plugin.log("[KickRunnable] Failed to store ban for " + playerUUID);
+		}
+	}
 }

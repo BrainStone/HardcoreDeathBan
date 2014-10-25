@@ -30,11 +30,11 @@ import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import net.minecraft.server.v1_5_R3.NBTCompressedStreamTools;
-import net.minecraft.server.v1_5_R3.NBTTagCompound;
-import net.minecraft.server.v1_5_R3.NBTTagDouble;
-import net.minecraft.server.v1_5_R3.NBTTagFloat;
-import net.minecraft.server.v1_5_R3.NBTTagList;
+import net.minecraft.server.v1_7_R3.NBTCompressedStreamTools;
+import net.minecraft.server.v1_7_R3.NBTTagCompound;
+import net.minecraft.server.v1_7_R3.NBTTagDouble;
+import net.minecraft.server.v1_7_R3.NBTTagFloat;
+import net.minecraft.server.v1_7_R3.NBTTagList;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -51,32 +51,37 @@ import org.bukkit.util.Vector;
  * @author one4me
  */
 public class ImprovedOfflinePlayer {
-	private String player;
-	private File file;
-	private NBTTagCompound compound;
-	private boolean exists = false;
-	private boolean autosave = true;
-
-	public ImprovedOfflinePlayer(OfflinePlayer offlineplayer) {
-		exists = this.loadPlayerData(offlineplayer.getUniqueId());
-	}
-
-	public ImprovedOfflinePlayer(UUID uuid) {
-		exists = this.loadPlayerData(uuid);
-	}
-	
-	@SuppressWarnings("deprecation")
-	public ImprovedOfflinePlayer(String player) {
-		exists = this.loadPlayerData(Bukkit.getOfflinePlayer(player).getUniqueId());
-	}
-
 	@SuppressWarnings("deprecation")
 	public static UUID getUUIDFromName(String player) {
 		return Bukkit.getOfflinePlayer(player).getUniqueId();
 	}
 
+	private String player;
+	private File file;
+	private NBTTagCompound compound;
+	private boolean exists = false;
+
+	private boolean autosave = true;
+
+	public ImprovedOfflinePlayer(OfflinePlayer offlineplayer) {
+		exists = loadPlayerData(offlineplayer.getUniqueId());
+	}
+
+	@SuppressWarnings("deprecation")
+	public ImprovedOfflinePlayer(String player) {
+		exists = loadPlayerData(Bukkit.getOfflinePlayer(player).getUniqueId());
+	}
+
+	public ImprovedOfflinePlayer(UUID uuid) {
+		exists = loadPlayerData(uuid);
+	}
+
 	public boolean exists() {
 		return exists;
+	}
+
+	public short getAir() {
+		return compound.getShort("Air");
 	}
 
 	public boolean getAutoSave() {
@@ -160,16 +165,12 @@ public class ImprovedOfflinePlayer {
 	}
 
 	public Location getLocation() {
-		final NBTTagList position = compound.getList("Pos");
-		final NBTTagList rotation = compound.getList("Rotation");
+		final NBTTagList position = compound.getList("Pos", 0);
+		final NBTTagList rotation = compound.getList("Rotation", 0);
 		return new Location(
 				Bukkit.getWorld(new UUID(compound.getLong("WorldUUIDMost"),
-						compound.getLong("WorldUUIDLeast"))),
-				((NBTTagDouble) position.get(0)).data,
-				((NBTTagDouble) position.get(1)).data,
-				((NBTTagDouble) position.get(2)).data,
-				((NBTTagFloat) rotation.get(0)).data,
-				((NBTTagFloat) rotation.get(1)).data);
+						compound.getLong("WorldUUIDLeast"))), position.d(0),
+				position.d(1), position.d(2), rotation.e(0), rotation.e(1));
 	}
 
 	public String getName() {
@@ -180,9 +181,9 @@ public class ImprovedOfflinePlayer {
 	public ArrayList<PotionEffect> getPotionEffects() {
 		final ArrayList<PotionEffect> effects = new ArrayList<PotionEffect>();
 		if (compound.hasKey("ActiveEffects")) {
-			final NBTTagList list = compound.getList("ActiveEffects");
+			final NBTTagList list = compound.getList("ActiveEffects", 0);
 			for (int i = 0; i < list.size(); i++) {
-				final NBTTagCompound effect = (NBTTagCompound) list.get(i);
+				final NBTTagCompound effect = list.get(i);
 				final byte amp = effect.getByte("Amplifier");
 				final byte id = effect.getByte("Id");
 				final int time = effect.getInt("Duration");
@@ -199,6 +200,14 @@ public class ImprovedOfflinePlayer {
 
 	public float getSaturation() {
 		return compound.getFloat("foodSaturationLevel");
+	}
+
+	public int getScore() {
+		return compound.getInt("Score");
+	}
+
+	public boolean getSleeping() {
+		return compound.getBoolean("Sleeping");
 	}
 
 	public short getTimeAttack() {
@@ -222,10 +231,8 @@ public class ImprovedOfflinePlayer {
 	}
 
 	public Vector getVelocity() {
-		final NBTTagList list = compound.getList("Motion");
-		return new Vector(((NBTTagDouble) list.get(0)).data,
-				((NBTTagDouble) list.get(1)).data,
-				((NBTTagDouble) list.get(2)).data);
+		final NBTTagList list = compound.getList("Motion", 0);
+		return new Vector(list.d(0), list.d(1), list.d(2));
 	}
 
 	public float getWalkSpeed() {
@@ -236,8 +243,8 @@ public class ImprovedOfflinePlayer {
 		try {
 			player = uuid.toString();
 			for (final World w : Bukkit.getWorlds()) {
-				file = new File(w.getWorldFolder(), "playerdata" + File.separator
-						+ player + ".dat");
+				file = new File(w.getWorldFolder(), "playerdata"
+						+ File.separator + player + ".dat");
 				if (file.exists()) {
 					compound = NBTCompressedStreamTools.a(new FileInputStream(
 							file));
@@ -263,6 +270,13 @@ public class ImprovedOfflinePlayer {
 		}
 	}
 
+	public void setAir(int input) {
+		compound.setShort("Air", (short) input);
+		if (autosave) {
+			savePlayerData();
+		}
+	}
+
 	public void setAutoSave(boolean autosave) {
 		this.autosave = autosave;
 	}
@@ -274,63 +288,63 @@ public class ImprovedOfflinePlayer {
 		compound.setString("SpawnWorld", location.getWorld().getName());
 		compound.setBoolean("SpawnForced", override == null ? false : override);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setDeathTime(int input) {
 		compound.setShort("DeathTime", (short) input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setExhaustion(float input) {
 		compound.setFloat("foodExhaustionLevel", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setExp(float input) {
 		compound.setFloat("XpP", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setFallDistance(float input) {
 		compound.setFloat("FallDistance", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setFireTicks(int input) {
 		compound.setShort("Fire", (short) input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setFlySpeed(float speed) {
 		compound.getCompound("abilities").setFloat("flySpeed", speed);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setFoodLevel(int input) {
 		compound.setInt("foodLevel", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setFoodTickTimer(int input) {
 		compound.setInt("foodTickTimer", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
@@ -338,49 +352,49 @@ public class ImprovedOfflinePlayer {
 	public void setGameMode(GameMode input) {
 		compound.setInt("playerGameType", input.getValue());
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setHealF(float healF) {
 		compound.setFloat("HealF", healF);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setHealth(int input) {
 		compound.setShort("Health", (short) input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setIsInvulnerable(boolean input) {
 		compound.setBoolean("Invulnerable", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setIsOnGround(boolean input) {
 		compound.setBoolean("OnGround", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setIsSleeping(boolean input) {
 		compound.setBoolean("Sleeping", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setLevel(int input) {
 		compound.setInt("XpLevel", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
@@ -392,16 +406,16 @@ public class ImprovedOfflinePlayer {
 		compound.setLong("WorldUUIDLeast", uuid.getLeastSignificantBits());
 		compound.setInt("Dimension", w.getEnvironment().getId());
 		final NBTTagList position = new NBTTagList();
-		position.add(new NBTTagDouble(null, location.getX()));
-		position.add(new NBTTagDouble(null, location.getY()));
-		position.add(new NBTTagDouble(null, location.getZ()));
+		position.add(new NBTTagDouble(location.getX()));
+		position.add(new NBTTagDouble(location.getY()));
+		position.add(new NBTTagDouble(location.getZ()));
 		compound.set("Pos", position);
 		final NBTTagList rotation = new NBTTagList();
-		rotation.add(new NBTTagFloat(null, location.getYaw()));
-		rotation.add(new NBTTagFloat(null, location.getPitch()));
+		rotation.add(new NBTTagFloat(location.getYaw()));
+		rotation.add(new NBTTagFloat(location.getPitch()));
 		compound.set("Rotation", rotation);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
@@ -410,7 +424,7 @@ public class ImprovedOfflinePlayer {
 		if (effects.isEmpty()) {
 			compound.remove("ActiveEffects");
 			if (autosave) {
-				this.savePlayerData();
+				savePlayerData();
 			}
 			return;
 		}
@@ -424,108 +438,89 @@ public class ImprovedOfflinePlayer {
 		}
 		compound.set("ActiveEffects", activeEffects);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setRemainingAir(int input) {
 		compound.setShort("Air", (short) input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setSaturation(float input) {
 		compound.setFloat("foodSaturationLevel", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
+		}
+	}
+
+	public void setScore(int input) {
+		compound.setInt("Score", input);
+		if (autosave) {
+			savePlayerData();
+		}
+	}
+
+	public void setSleeping(boolean input) {
+		compound.setBoolean("Sleeping", input);
+		if (autosave) {
+			savePlayerData();
 		}
 	}
 
 	public void setTimeAttack(short input) {
 		compound.setShort("AttackTime", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setTimeDeath(short input) {
 		compound.setShort("DeathTime", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setTimeHurt(short input) {
 		compound.setShort("HurtTime", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setTimeSleep(short input) {
 		compound.setShort("SleepTimer", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setTotalExperience(int input) {
 		compound.setInt("XpTotal", input);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setVelocity(Vector vector) {
 		final NBTTagList motion = new NBTTagList();
-		motion.add(new NBTTagDouble(null, vector.getX()));
-		motion.add(new NBTTagDouble(null, vector.getY()));
-		motion.add(new NBTTagDouble(null, vector.getZ()));
+		motion.add(new NBTTagDouble(vector.getX()));
+		motion.add(new NBTTagDouble(vector.getY()));
+		motion.add(new NBTTagDouble(vector.getZ()));
 		compound.set("Motion", motion);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
 	}
 
 	public void setWalkSpeed(float speed) {
 		compound.getCompound("abilities").setFloat("walkSpeed", speed);
 		if (autosave) {
-			this.savePlayerData();
+			savePlayerData();
 		}
-	}
-
-	public void setAir(int input) {
-		compound.setShort("Air", (short) input);
-		if (autosave) {
-			this.savePlayerData();
-		}
-	}
-	
-	public short getAir() {
-		return compound.getShort("Air");
-	}
-
-	public void setSleeping(boolean input) {
-		compound.setBoolean("Sleeping", input);
-		if (autosave) {
-			this.savePlayerData();
-		}
-	}
-	
-	public boolean getSleeping() {
-		return compound.getBoolean("Sleeping");
-	}
-
-	public void setScore(int input) {
-		compound.setInt("Score", input);
-		if (autosave) {
-			this.savePlayerData();
-		}
-	}
-	
-	public int getScore() {
-		return compound.getInt("Score");
 	}
 }
 /*

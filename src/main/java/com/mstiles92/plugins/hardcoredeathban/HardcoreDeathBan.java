@@ -25,6 +25,7 @@ package com.mstiles92.plugins.hardcoredeathban;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.UUID;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -38,7 +39,6 @@ import com.mstiles92.plugins.hardcoredeathban.commands.Credits;
 import com.mstiles92.plugins.hardcoredeathban.commands.Deathban;
 import com.mstiles92.plugins.hardcoredeathban.listeners.PlayerListener;
 import com.mstiles92.plugins.hardcoredeathban.util.Bans;
-import com.mstiles92.plugins.hardcoredeathban.util.ImprovedOfflinePlayer;
 import com.mstiles92.plugins.hardcoredeathban.util.RevivalCredits;
 
 /**
@@ -50,16 +50,45 @@ import com.mstiles92.plugins.hardcoredeathban.util.RevivalCredits;
  */
 public class HardcoreDeathBan extends JavaPlugin {
 	private static HardcoreDeathBan instance;
+
+	public static HardcoreDeathBan getInstance() {
+		return instance;
+	}
+
 	private UpdateChecker updateChecker;
+
 	private CommandRegistry commandRegistry;
-
 	public RevivalCredits credits = null;
-	public Bans bans = null;
 
+	public Bans bans = null;
 	private final SimpleDateFormat TimeFormat = new SimpleDateFormat(
 			"hh:mm a z");
+
 	private final SimpleDateFormat DateFormat = new SimpleDateFormat(
 			"MM/dd/yyyy");
+
+	public UpdateChecker getUpdateChecker() {
+		return updateChecker;
+	}
+
+	public void log(String message) {
+		if (getConfig().getBoolean("Verbose")) {
+			getLogger().info(message);
+		}
+	}
+
+	@Override
+	public boolean onCommand(CommandSender sender, Command command,
+			String label, String[] args) {
+		return commandRegistry.handleCommand(sender, command, label, args);
+	}
+
+	@Override
+	public void onDisable() {
+		credits.save();
+		bans.save();
+		saveConfig();
+	}
 
 	@Override
 	public void onEnable() {
@@ -70,7 +99,7 @@ public class HardcoreDeathBan extends JavaPlugin {
 		try {
 			credits = new RevivalCredits(this, "credits.yml");
 			bans = new Bans(this, "bans.yml");
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			getLogger()
 					.warning(
 							ChatColor.RED
@@ -91,33 +120,28 @@ public class HardcoreDeathBan extends JavaPlugin {
 		commandRegistry = new CommandRegistry(this);
 		commandRegistry.registerCommands(new Deathban());
 		commandRegistry.registerCommands(new Credits());
-	}
 
-	@Override
-	public void onDisable() {
-		credits.save();
-		bans.save();
-		saveConfig();
-	}
+		try {
+			log(Class.forName("java.util.UUID").toString());
+		} catch (final ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 
-	@Override
-	public boolean onCommand(CommandSender sender, Command command,
-			String label, String[] args) {
-		return commandRegistry.handleCommand(sender, command, label, args);
-	}
-
-	public void log(String message) {
-		if (getConfig().getBoolean("Verbose")) {
-			getLogger().info(message);
+		try {
+			log(Class
+					.forName(
+							"com.mstiles92.plugins.hardcoredeathban.util.ImprovedOfflinePlayer")
+					.toString());
+		} catch (final ClassNotFoundException e) {
+			e.printStackTrace();
 		}
 	}
 
-	public String replaceVariables(String msg, String name) {
+	public String replaceVariables(String msg, String name, UUID uuid) {
 		final Calendar now = Calendar.getInstance();
-		final Calendar unbanTime = bans.getUnbanCalendar(ImprovedOfflinePlayer
-				.getUUIDFromName(name));
+		final Calendar unbanTime = bans.getUnbanCalendar(uuid);
 
-		msg = msg.replaceAll("%server%", this.getServer().getServerName());
+		msg = msg.replaceAll("%server%", getServer().getServerName());
 		if (name != null) {
 			msg = msg.replaceAll("%player%", name);
 		}
@@ -134,13 +158,5 @@ public class HardcoreDeathBan extends JavaPlugin {
 					CalendarUtils.buildTimeDifference(now, unbanTime));
 		}
 		return msg;
-	}
-
-	public UpdateChecker getUpdateChecker() {
-		return updateChecker;
-	}
-
-	public static HardcoreDeathBan getInstance() {
-		return instance;
 	}
 }
