@@ -23,13 +23,14 @@
 
 package com.mstiles92.plugins.hardcoredeathban.commands;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+
 import com.mstiles92.plugins.commonutils.commands.Arguments;
 import com.mstiles92.plugins.commonutils.commands.CommandHandler;
 import com.mstiles92.plugins.commonutils.commands.annotations.Command;
 import com.mstiles92.plugins.hardcoredeathban.HardcoreDeathBan;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 
 /**
  * Deathban is the CommandExecutor that handles all commands dealing
